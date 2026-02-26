@@ -4,8 +4,16 @@ from app.supabase_client import supabase
 from app.pdf_service import process_document
 from app.retrieval_service import query_document
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/documents")
