@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi.responses import Response
 from uuid import uuid4
 from app.supabase_client import supabase
 from app.pdf_service import process_document
@@ -139,3 +140,31 @@ def get_document(document_id: str):
         "created_at": doc_response.data["created_at"],
         "metrics": metrics_response.data if metrics_response.data else None,
     }
+
+
+@app.get("/documents/{document_id}/file")
+def get_document_file(document_id: str):
+    doc_response = supabase.table("documents") \
+        .select("file_path, file_name") \
+        .eq("id", document_id) \
+        .single() \
+        .execute()
+
+    if not doc_response.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    file_path = doc_response.data["file_path"]
+    file_name = doc_response.data["file_name"] or "document.pdf"
+
+    file_bytes = supabase.storage.from_("documents").download(file_path)
+
+    if file_bytes is None:
+        raise HTTPException(status_code=404, detail="File not found in storage")
+
+    return Response(
+        content=file_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{file_name}"',
+        },
+    )
